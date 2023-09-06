@@ -71,6 +71,7 @@ function App() {
       });
       setData(dataPoints);
     }
+    // eslint-disable-next-line
   }, [weekData]);
 
   const getDataPointValue = (y, x, date) => {
@@ -141,6 +142,7 @@ function App() {
         ],
       });
     }
+    // eslint-disable-next-line
   }, [data, weekData]);
 
   return (
