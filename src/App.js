@@ -39,47 +39,66 @@ function App() {
     );
   };
 
-  const getTime = (x,y, date) => {
-    return [x,y,date.getTime(), 0]
-  }
-
   React.useEffect(() => {
     if (Object.entries(weekData).length) {
       setYAxisData(Object.keys(weekData));
-    }
-  }, [weekData]);
-
-  React.useEffect(() => {
-    fetchData().then((data) => {
-      const tempData = [];
-      data.forEach((item) => {
-        if (weekData.hasOwnProperty(item.date)) {
-          weekData[item.date].push(item);
-        } else {
-          weekData[item.date] = [item];
-        }
-      });
-      setWeekData(weekData);
-
+      const dataPoints = [];
       Object.entries(weekData).forEach((day, rowIndex) => {
         let dayItem = day[1];
         if (dayItem) {
-          dayItem.forEach((timeItem, xIndex) => {
-            tempData.push({
+          dayItem.forEach((timeItem, colIndex) => {
+            const date = new Date(timeItem.minute_window);
+            const options = {
+              year: "numeric",
+              month: "numeric",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+            };
+            dataPoints.push({
               name: timeItem.sourceTag,
-              timeStamp: new Date(timeItem.minute_window).toLocaleString(),
-              value: getTime(xIndex, rowIndex, new Date(timeItem.minute_window)), // check if index passed correctly
+              timeStamp: date.toLocaleString("en-us", options),
+              value: getDataPointValue(rowIndex, colIndex, date),
               itemStyle: {
                 normal: {
-                  color: colorMap[timeItem.sourceTag],
+                  color: getColor(date, timeItem, rowIndex, colIndex),
                 },
               },
             });
           });
         }
       });
-      console.log("tempData", tempData);
-      setData(tempData);
+      setData(dataPoints);
+    }
+  }, [weekData]);
+
+  const getDataPointValue = (y, x, date) => {
+    return [y, x, date.getTime(), 0];
+  };
+
+  const getColor = (date, item, rowIndex, colIndex) => {
+    const dataPoint = weekData[Object.keys(weekData)[rowIndex]];
+    const pDate =
+      colIndex === 0
+        ? new Date(dataPoint[colIndex].minute_window).getTime()
+        : new Date(dataPoint[colIndex - 1].minute_window).getTime();
+    const cDate = date.getTime();
+    const diff = Math.abs(cDate - pDate) / 1000 / 60;
+    return diff <= 5 ? colorMap[item.sourceTag] : colorMap.White;
+  };
+
+  React.useEffect(() => {
+    fetchData().then((data) => {
+      const weekHashMap = {};
+      data.forEach((item) => {
+        if (weekHashMap.hasOwnProperty(item.date)) {
+          weekHashMap[item.date].push(item);
+        } else {
+          weekHashMap[item.date] = [item];
+        }
+      });
+      setWeekData(weekHashMap);
     });
   }, []);
 
@@ -96,13 +115,16 @@ function App() {
         },
         grid: { height: 300 },
         xAxis: {
+          max: 288,
           // scale: true,
           type: "value",
-          // axisLabel: {
-          //   formatter: `{mm}-{ss}`,
-          // },
+          axisLabel: {
+            formatter: function (val) {
+              return val;
+            },
+          },
         },
-        yAxis: { data: yAxisData },
+        yAxis: { type: "category", data: yAxisData },
         series: [
           {
             name: "Power Source",
@@ -111,10 +133,6 @@ function App() {
             itemStyle: {
               opacity: 0.8,
             },
-            // encode: {
-            //   x: [1, 2],
-            //   y: 0,
-            // },
             data: data,
             label: {
               show: true,
